@@ -6,6 +6,9 @@ import sys
 import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message
+from flask import Flask, request
+import os
+import subprocess
 from config import TOKEN, ADMIN_ID, SUPPORT_CHAT_ID
 from keyboards import main_keyboard, get_price_button, get_remove_game_keyboard, get_currency_keyboard
 from collections import Counter
@@ -13,6 +16,10 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+app = Flask(__name__)
+
+bot_process = None  # Процесс бота
 
 # Храним игры для каждого пользователя
 user_games = {}
@@ -22,6 +29,32 @@ user_states = {}
 support_messages = []
 # Словарь для хранения настроек валют пользователей
 user_settings = {}
+
+@app.route("/")
+def home():
+    return "<h1>Бот на Railway</h1><button onclick=\"fetch('/start');\">ВКЛ</button> <button onclick=\"fetch('/stop');\">ВЫКЛ</button>"
+
+@app.route("/start")
+def start_bot():
+    global bot_process
+    if bot_process is None:
+        bot_process = subprocess.Popen(["python", "main.py"])
+        return "Бот запущен!"
+    return "Бот уже работает!"
+
+@app.route("/stop")
+def stop_bot():
+    global bot_process
+    if bot_process is not None:
+        bot_process.terminate()
+        bot_process = None
+        return "Бот выключен!"
+    return "Бот уже выключен!"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+
 
 async def set_bot_commands():
     commands = [
