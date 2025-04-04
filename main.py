@@ -6,9 +6,13 @@ import sys
 import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message
+from aiogram.filters import Command
 from config import TOKEN, ADMIN_ID, SUPPORT_CHAT_ID
 from keyboards import main_keyboard, get_price_button, get_remove_game_keyboard, get_currency_keyboard
 from collections import Counter
+from aiogram import Dispatcher
+from aiogram.types import Message
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
@@ -36,30 +40,66 @@ async def main():
     await dp.start_polling(bot)
 
 # Функция для получения отчета для админа
-async def get_admin_report():
+@dp.message(F.text == "/otchet")
+async def otchet_command(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("⛔ Эта команда доступна только администратору.")
+
     total_users = len(user_games)
     total_games = sum(len(games) for games in user_games.values())
-    most_added_games = Counter(game for games in user_games.values() for game in games).most_common(5)
+    total_support_messages = len(support_messages)  # Подсчёт сообщений в поддержку
 
-    report = (
-        f"📝 *Отчет по боту*\n\n"
+    top_games = Counter(
+        appid for games in user_games.values() for appid in games
+    ).most_common(5)
+
+    top_game_ids = [appid for appid, _ in top_games]
+    game_names = await asyncio.gather(*(get_price(appid, message.from_user.id) for appid in top_game_ids))
+
+    top_games_text = "\n".join([
+        f"{name} (ID: {appid}) — {count} добавлений"
+        for (appid, count), (name, *_)
+        in zip(top_games, game_names)
+    ])
+
+    otchet = (
+        f"📊 Отчёт:\n"
         f"👥 Пользователей: {total_users}\n"
-        f"🎮 Игр в системе: {total_games}\n"
-        f"📩 Сообщений в поддержку: {len(support_messages)}\n"
-        f"\n🔥 *Часто добавляемые игры:*"
+        f"🎮 Добавлено игр: {total_games}\n"
+        f"📩 Сообщений в поддержку: {total_support_messages}\n\n"
+        f"🏆 Топ-5 игр:\n{top_games_text}"
     )
-    for game, count in most_added_games:
-        game_name, _, _, _ = await get_price(game)
-        report += f"\n{game_name} - {count} раз(а)"
-    return report
 
-# Команда /report для администратора
-@dp.message(F.text == "/report")
-async def report(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return  # Если не администратор, игнорируем команду
-    report = await get_admin_report()
-    await message.answer(report, parse_mode="Markdown")
+    await message.answer(otchet)
+
+# Переключаем уведомления
+# Обработчик для кнопки "Уведомления"
+@dp.message(F.text == "Уведомления")
+async def toggle_notifications(message: Message):
+    user_id = message.from_user.id
+    # Переключение уведомлений
+    if user_id in user_settings:
+        user_settings[user_id]['notifications'] = not user_settings[user_id].get('notifications', False)
+    else:
+        user_settings[user_id] = {'notifications': True}
+
+    notification_status = "включены" if user_settings[user_id]['notifications'] else "выключены"
+    await message.answer(f"Уведомления о скидках {notification_status}.")
+
+async def check_discounts_for_user(user_id):
+    # Получаем список добавленных игр пользователя
+    user_added_games = user_games.get(user_id, [])
+
+    for appid in user_added_games:
+        # Проверяем наличие скидки на игру
+        price_data = await get_price(appid, user_id)  # Эта функция должна возвращать актуальную цену и скидку
+
+        if price_data['discount'] > 0:  # Например, если скидка больше 0%
+            if user_settings.get(user_id, {}).get('notifications', False):  # Если уведомления включены
+                game_name = price_data['name']
+                discount_percent = price_data['discount']
+                await bot.send_message(user_id, f"🎮 Игра {game_name} теперь со скидкой {discount_percent}%!")
+
 
 # Функция для получения цены из Steam Store API
 async def get_price(appid, user_id):
@@ -85,6 +125,8 @@ async def get_price(appid, user_id):
 
     game_name = data[str(appid)]["data"].get("name", "Неизвестная игра") if data else "Неизвестная игра"
     return game_name, price_data, discount_data
+
+
 
 
 url_pattern = r"https://store\.steampowered\.com/app/(\d+)"
@@ -264,6 +306,8 @@ async def refresh_prices(callback: types.CallbackQuery):
     else:
         await callback.answer("Цены не изменились ✅", show_alert=True)
 
+
+
 @dp.message(F.text == "👤 Профиль")
 async def profile(message: Message):
     user_id = message.from_user.id  # Получаем ID пользователя
@@ -336,6 +380,7 @@ async def show_updates(message: Message):
         "\n🔥 Следите за обновлениями!"
     )
     await message.answer(updates_text, parse_mode="Markdown")
+
 
 @dp.callback_query(F.data.startswith("toggle_currency_"))
 async def toggle_currency(call: types.CallbackQuery):
