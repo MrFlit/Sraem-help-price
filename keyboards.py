@@ -1,4 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery
+
 
 # Основная клавиатура
 def main_keyboard():
@@ -6,7 +8,7 @@ def main_keyboard():
         [KeyboardButton(text="👤 Профиль")],
         [KeyboardButton(text="➕ Добавить Игру"), KeyboardButton(text="❌ Удалить Игру")],
         [KeyboardButton(text="💰 Проверить цены"), KeyboardButton(text="🔔 Обновления"), KeyboardButton(text="⚙️ Настройка валют")],
-        [KeyboardButton(text="🆘 Поддержка")],
+        [KeyboardButton(text="🆘 Поддержка"), KeyboardButton(text="Уведомления")]  # Добавляем кнопку для управления уведомлениями
     ], resize_keyboard=True)
 
 # Кнопка проверки цены
@@ -22,9 +24,6 @@ def get_remove_game_keyboard(games):
         for game_id in games
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-
-
 
 def get_currency_keyboard(user_id, user_settings):
     if user_id not in user_settings:
