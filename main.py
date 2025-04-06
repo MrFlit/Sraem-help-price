@@ -11,7 +11,6 @@ from config import TOKEN, ADMIN_ID, SUPPORT_CHAT_ID
 from keyboards import main_keyboard, get_price_button, get_remove_game_keyboard, get_currency_keyboard
 from collections import Counter
 from aiogram import Dispatcher
-from aiogram.types import Message
 
 logging.basicConfig(level=logging.INFO)
 
@@ -126,9 +125,6 @@ async def get_price(appid, user_id):
     game_name = data[str(appid)]["data"].get("name", "Неизвестная игра") if data else "Неизвестная игра"
     return game_name, price_data, discount_data
 
-
-
-
 url_pattern = r"https://store\.steampowered\.com/app/(\d+)"
 
 @dp.message(F.text == "/start")
@@ -238,7 +234,7 @@ async def check_prices(message: Message):
         game_name, price_data, discount_data = await get_price(appid, user_id)
         discount_text = None  # Будем хранить единственную скидку
 
-        response += f"\n🎮 {game_name}\n\n"
+        response += f"🎮 {game_name}\n\n"
 
         if price_data:
             for currency, price in price_data.items():
@@ -248,7 +244,7 @@ async def check_prices(message: Message):
                 # Берём первую найденную скидку (все скидки обычно одинаковые)
                 if discount_text is None and currency in discount_data:
                     discount = discount_data[currency]
-                    discount_text = f"💰 Скидка: {discount}%" if discount else "💰 Скидка: 0%"
+                    discount_text = f"💰 Скидка: {discount}%\n-----------------" if discount else "💰 Скидка: 0% \n-----------------"
 
             if discount_text:
                 response += f"\n{discount_text}\n"  # Ставим скидку один раз после всех цен
@@ -305,8 +301,6 @@ async def refresh_prices(callback: types.CallbackQuery):
         await callback.answer("Цены обновлены ✅", show_alert=True)
     else:
         await callback.answer("Цены не изменились ✅", show_alert=True)
-
-
 
 @dp.message(F.text == "👤 Профиль")
 async def profile(message: Message):
@@ -380,7 +374,6 @@ async def show_updates(message: Message):
         "\n🔥 Следите за обновлениями!"
     )
     await message.answer(updates_text, parse_mode="Markdown")
-
 
 @dp.callback_query(F.data.startswith("toggle_currency_"))
 async def toggle_currency(call: types.CallbackQuery):
