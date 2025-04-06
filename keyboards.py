@@ -8,7 +8,7 @@ def main_keyboard():
         [KeyboardButton(text="👤 Профиль")],
         [KeyboardButton(text="➕ Добавить Игру"), KeyboardButton(text="❌ Удалить Игру")],
         [KeyboardButton(text="💰 Проверить цены"), KeyboardButton(text="🔔 Обновления"), KeyboardButton(text="⚙️ Настройка валют")],
-        [KeyboardButton(text="🆘 Поддержка"), KeyboardButton(text="Уведомления")]  # Добавляем кнопку для управления уведомлениями
+        [KeyboardButton(text="🆘 Поддержка")]  # Добавляем кнопку для управления уведомлениями
     ], resize_keyboard=True)
 
 # Кнопка проверки цены
@@ -47,3 +47,5 @@ def get_currency_keyboard(user_id, user_settings):
         buttons.append([InlineKeyboardButton(text=f"{is_selected} {label}", callback_data=f"toggle_currency_{code}")])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
